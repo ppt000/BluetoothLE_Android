@@ -1,0 +1,524 @@
+
+/*
+      ScanRecord record;
+      byte[] rawBytes;
+      record = result.getScanRecord(); // I assume that result is always not null otherwise the callback should not be called
+      rawBytes = record.getBytes();
+      Log.d(TAG, "Raw Bytes <" + bytesToHex(rawBytes) + ">.");
+*/
+
+
+  // Snippet to transform a byte array into hexadecimal strings
+  final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+  public static String bytesToHex(byte[] bytes) {
+    char[] hexChars = new char[bytes.length * 3];
+    for (int j = 0; j < bytes.length; j++) {
+      int v = bytes[j] & 0xFF;
+      hexChars[j * 3] = 'x';
+      hexChars[j * 3 + 1] = hexArray[v >>> 4];
+      hexChars[j * 3 + 2] = hexArray[v & 0x0F];
+    }
+    return new String(hexChars);
+  }
+
+
+@Override
+    public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+      if (status == BluetoothGatt.GATT_SUCCESS) {
+        // broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+        // List<BluetoothGattService> services = gatt.getServices();
+        // for ( BluetoothGattService service : services ) {Log.d( TAG, " Service UUID <" + service.getUuid().toString() + ">.");}
+        BluetoothGattService mGattService = gatt.getService(HEART_RATE_SERVICE); // Check the service we want is there
+        if (mGattService == null ) {Log.d( TAG, "The Gatt service requested wasn't found.");} // TODO: deal with this error
+
+        // List<BluetoothGattCharacteristic> characteristics = mGattService.getCharacteristics();
+        // for ( BluetoothGattCharacteristic characteristic : characteristics ) {
+        //   Log.d( TAG, " Characteristic UUID <" + characteristic.getUuid().toString() + ">.");
+        // }
+        BluetoothGattCharacteristic mGattCharacteristic = mGattService.getCharacteristic(HEART_RATE_CHARACTERISTIC);
+        if (mGattCharacteristic == null) {Log.d( TAG, "The Gatt characteristic requested wasn't found.");} // TODO: deal with this error
+
+        // List<BluetoothGattDescriptor> descriptors = mGattCharacteristic.getDescriptors();
+        // for ( BluetoothGattDescriptor descriptor : descriptors ) {
+        //   Log.d( TAG, " Descriptor UUID <" + descriptor.getUuid().toString() + ">.");
+        // }
+
+        if (!gatt.setCharacteristicNotification(mGattCharacteristic, true))
+          {Log.d(TAG, "setCharacteristicNotification returned FALSE");} // TODO: deal with error
+        BluetoothGattDescriptor descriptor = mGattCharacteristic.getDescriptors().get(0);
+        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        gatt.writeDescriptor(descriptor);
+
+        // if (!gatt.readCharacteristic(mGattCharacteristic))
+        //   {Log.d(TAG, "readCharacteristic returned FALSE");} // TODO: deal with error
+
+      } else {Log.w( TAG, "onServicesDiscovered received: " + status);}
+    }
+
+
+
+
+    xmlns:tools="http://schemas.android.com/tools"
+
+
+
+
+
+    mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      @Override
+      public void onItemClick(AdapterView parent, View v, int position, long id) {
+        // position = id = position of the selection in the array, starting from 0
+        Intent returnIntent = new Intent();
+        returnIntent.putExtra("address", pairedDevicesList.get(position).getAddress());
+        setResult(Activity.RESULT_OK, returnIntent);
+        finish();
+      }
+    });
+
+
+
+
+
+
+
+
+
+
+
+    private Runnable sendRandomData = new Runnable() {
+      @Override
+      public void run() {
+        Random r = new Random();
+        Double rnum = (r.nextGaussian()*1.5)+20;
+        String sdata = String.format("%.1f",rnum);
+        Log.d(TAG," Randomly generated data is <"+sdata+">.");
+        try {mmOutStream.write(sdata.getBytes());}
+        catch (IOException e) {
+          Log.e(TAG, "Exception during write", e);
+          // We don't stop on write error. TODO: maybe we should return after frequent errors.
+          // TEST: try returning for one error for now otherwise the thread never stops on the server side:
+          Looper.myLooper().quit();
+        }
+        handler.postDelayed(sendRandomData, DELAY);  // Run again in a few seconds
+      }
+    };
+
+    private Runnable readData = new Runnable() {
+      @Override
+      public void run() {
+        byte[] buffer = new byte[1024];
+        int bytes = 0;
+        try {bytes = mmInStream.read(buffer);}
+        catch (IOException e) {
+          Log.e(TAG, "disconnected", e);
+          // Send a failure message back to the Activity
+          sendToast("Device connection was lost");
+          Looper.myLooper().quit();
+        }
+        // Send the obtained bytes to the UI Activity TODO: Check if the 'sending' can be done better
+        mHandler.obtainMessage(Constants.MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+        handler.postDelayed(readData, 1); // Repeat in 1ms
+      }
+    };
+
+
+
+
+
+
+
+
+
+  // private static final UUID HIDP = UUID.fromString("00110000-0000-1000-8000-00805F9B34FB");
+  // private static final UUID SDP = UUID.fromString("00010000-0000-1000-8000-00805F9B34FB");
+  // private static final UUID RFCOMM = UUID.fromString("00030000-0000-1000-8000-00805F9B34FB");
+  // 2016-10-28: the first UUID from the list retrieved from the ASUS is: 0000110a-0000-1000-8000-00805f9b34fb
+  // private static UUID THIS_APP_UUID;
+
+
+
+
+// Code to send a message to the main UI
+   // mHandler.obtainMessage(Constants.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
+
+
+
+
+
+
+  // The threads
+  private ListenThread mListenThread;
+  private ConnectThread mConnectThread;
+  private ConnectedThread mConnectedThread;
+
+
+
+
+  /**
+   * Start the service by listening to incoming requests for connection.
+   * Specifically start ListenThread to begin a session in listening (server) mode.
+   * Called by the Activity onResume().
+   * PAOLO: I have forced all threads to be killed, whereas before mListenThread would be left untouched by this call
+   * if it existed already.  Not sure it makes a difference as this function should not be called if we are already in a
+   * listening state.
+   */
+  protected synchronized void startListening() {  // Start the thread to listen on a BluetoothServerSocket
+    Log.d(TAG, "startListening");
+    if (getState()==STATE_NONE) {
+    // mListenThread = new ListenThread();
+    // mListenThread.start();
+      Future<BluetoothSocket> future = executor.submit(new ListenTask());
+      setState(STATE_LISTEN);
+    }
+  }
+
+  protected synchronized void stopListening(){
+    Log.d(TAG, "stopListening");
+    if (mListenThread != null) {mListenThread.cancel(); mListenThread = null;}
+    setState(STATE_NONE);
+  }
+
+  /**
+   * Start the ConnectThread to initiate a connection to a remote device.
+   * PAOLO: this function used to kill mConnectThread only in we were in STATE_CONNECT; don't understand why.
+   * Also, it didn't use to kill ListenThread. Don't understand either, why would we keep listening on another
+   * thread while attempting a connection on this one? I might be missing something.
+   */
+  protected synchronized void startConnecting() {
+    Log.d(TAG, "startConnecting to: " + mBluetoothDevice);
+    stopThreads();
+    mConnectThread = new ConnectThread();
+    mConnectThread.start();  // Start the thread to connect with the given device
+    setState(STATE_CONNECT);
+  }
+
+
+  protected synchronized void runConnection() {
+    Log.d(TAG, "Run Connection");
+    stopThreads();
+    mConnectedThread = new ConnectedThread(connectedSocket);
+    mConnectedThread.start();  // Start the thread to manage the connection and perform transmissions
+    setState(STATE_CONNECTED);
+    // Send the name of the connected device back to the UI Activity
+    sendToHandler(Constants.MESSAGE_DEVICE_NAME, Constants.DEVICE_NAME, mBluetoothDevice.getName());
+  }
+
+  protected synchronized void stopThreads() {
+    Log.d(TAG, "stopThreads");
+    if (mConnectThread != null) {mConnectThread.cancel();mConnectThread = null;}
+    if (mConnectedThread != null) {mConnectedThread.cancel();mConnectedThread = null;}
+    if (mListenThread != null) {mListenThread.cancel(); mListenThread = null;}
+    setState(STATE_NONE);
+  }
+
+
+
+
+  /**
+   * This thread runs while listening for incoming connections. It behaves
+   * like a server-side client. It runs until a connection is accepted(or until cancelled).
+   * It creates and runs the BluetoothServerSocket, and does not need any input.
+   * It accepts any connection and creates a BluetoothSocket when it does.
+   * It launches then the manageConnectedSocket method with that socket.
+   */
+  private class ListenThread extends Thread {
+    private final BluetoothServerSocket mmServerSocket;
+
+    public ListenThread() {
+      Log.d(TAG,"Constructor of ListenThread launched.");
+      BluetoothServerSocket tmp = null;
+      try {tmp = mAdapter.listenUsingRfcommWithServiceRecord(NAME_SOCKET, THIS_APP_UUID);}  // Create a new listening server socket
+      catch (IOException e) {
+        Log.e(TAG, "ListenThread constructor: listen() failed.", e);
+        mmServerSocket=null;
+        sendToHandler(Constants.MESSAGE_ERROR_LISTENING, "", "");
+        return;
+      }
+      mmServerSocket = tmp;
+      Log.d(TAG,"Socket created in ListenThread() constructor with UUID <"+ THIS_APP_UUID +">.");
+    }
+
+    @Override
+    public void run() {  // Runs (i.e. start listening on) the server socket created
+      Log.d(TAG, "BEGIN mListenThread" + this);
+      setName("ListenThread");
+      BluetoothSocket socket;
+      if (mmServerSocket==null) {return;}  // Maybe not needed as we catch the exception anyway below, but it is cleaner.
+      try {socket = mmServerSocket.accept();}  // This is a blocking call and will only return on a successful connection or an exception
+      catch (IOException e) {
+        Log.e(TAG, "ListenThread.run: accept() failed.", e);
+        sendToHandler(Constants.MESSAGE_ERROR_LISTENING, "", "");
+        return;
+      }
+      if (socket != null) {   // If a connection was accepted TODO: can we assume socket is not null as we return on exception?
+        Log.d(TAG, "A connection was accepted.");
+        synchronized (BluetoothConnection.this) {connectedSocket = socket;}
+        sendToHandler(Constants.MESSAGE_RUN_CONNECTION, "", "");
+      } else {
+        Log.d(TAG, "A connection was NOT accepted.");
+        synchronized (BluetoothConnection.this) {connectedSocket = null;}
+        sendToHandler(Constants.MESSAGE_ERROR_LISTENING, "", "");
+      }
+      try {mmServerSocket.close();}
+      catch (IOException e) {Log.e(TAG, "ListenThread.cancel: close() failed", e);}  // Does it matter? Thread is going to die anyway.
+      Log.d(TAG, "END mListenThread" + this);
+    }
+
+    // TODO: I am not sure this method here makes sense as it can never be called.
+    public void cancel() {
+      Log.d(TAG, "ListenThread cancel <" + this + ">.");
+      interrupt();
+    }
+  }
+
+  private class ListenTask implements Callable<BluetoothSocket> {
+    private final BluetoothServerSocket mmServerSocket;
+
+    public ListenTask() {
+      Log.d(TAG,"Constructor of ListenTask launched.");
+      BluetoothServerSocket tmp = null;
+      try {tmp = mAdapter.listenUsingRfcommWithServiceRecord(NAME_SOCKET, THIS_APP_UUID);}  // Create a new listening server socket
+      catch (IOException e) {
+        Log.e(TAG, "ListenTask constructor: listen() failed.", e);
+        mmServerSocket=null;
+        sendToHandler(Constants.MESSAGE_ERROR_LISTENING, "", "");
+        return;
+      }
+      mmServerSocket = tmp;
+      Log.d(TAG,"Socket created in ListenThread() constructor with UUID <"+ THIS_APP_UUID +">.");
+    }
+
+    @Override
+    public BluetoothSocket call() {
+      BluetoothSocket socket;
+      if (mmServerSocket == null) {return null;}  // Maybe not needed as we catch the exception anyway below, but it is cleaner.
+      try {socket = mmServerSocket.accept();}  // This is a blocking call and will only return on a successful connection or an exception
+      catch (IOException e) {
+        Log.e(TAG, "ListenThread.run: accept() failed.", e);
+        socket = null; // TODO: Is that the best way to proceed in case of error?
+      } finally {  // close the server socket anyway
+        try {mmServerSocket.close();}
+        catch (IOException e) {Log.e(TAG, "ListenThread.cancel: close() failed", e);}
+      }
+      if (socket != null) {   // If a connection was accepted TODO: can we assume socket is not null as we return on exception?
+        Log.d(TAG, "A connection was accepted.");
+        sendToHandler(Constants.MESSAGE_RUN_CONNECTION, "", "");
+        return socket;
+      } else {
+        Log.d(TAG, "A connection was NOT accepted.");
+        sendToHandler(Constants.MESSAGE_ERROR_LISTENING, "", "");
+        return null;
+      }
+    }
+  }
+
+  /**
+   * This thread runs while attempting to make an outgoing connection
+   * with a device. It runs straight through; the connection either
+   * succeeds or fails.
+   * It creates the BluetoothSocket, and expects a BluetoothDevice handler but doesn't use any of its members.
+   * The only parameter used to make the connection is the UUID (check the method documentation).
+   * Once connected, it launches the manageConnectedSocket method with the bluetooth socket.
+   */
+  private class ConnectThread extends Thread {
+    private final BluetoothSocket mmSocket;
+
+    public ConnectThread() {
+      BluetoothSocket tmp = null;
+      try {tmp = mBluetoothDevice.createInsecureRfcommSocketToServiceRecord(THIS_APP_UUID);}  // Get a BluetoothSocket for a connection with the given UUID
+      catch (IOException e) {Log.e(TAG, "Socket create() failed", e);}
+      Log.d(TAG,"Socket created in ConnectThread() constructor with device <"+mBluetoothDevice.getName()+"> and UUID <"+ THIS_APP_UUID +">.");
+      mmSocket = tmp;
+    }
+
+    @Override
+    public void run() {
+      Log.i(TAG, "BEGIN mConnectThread Socket");
+      setName("ConnectThread");
+      mAdapter.cancelDiscovery();// Always cancel discovery because it will slow down a connection
+      if (mmSocket.isConnected()) {Log.d(TAG, "Socket is already connected!!!");}      // test, can probably be removed later
+      // Make a connection to the BluetoothSocket
+      try {mmSocket.connect();}// This is a blocking call and will only return on a successful connection or an exception
+      catch (IOException e) { // Close the socket
+        Log.e(TAG, "Connect failed in ConnectThread.run");
+        try {mmSocket.close();}
+        catch (IOException e2) {Log.e(TAG, "unable to close() socket during connection failure", e2);}
+        // Send a failure message back to the Activity
+        sendToHandler(Constants.MESSAGE_TOAST, Constants.TOAST, "Unable to connect to device");
+        return;
+      }
+      synchronized (BluetoothConnection.this) {mConnectThread = null;}  // Reset the ConnectThread because we're done TODO: What does it mean?
+      connectedSocket = mmSocket;
+      sendToHandler(Constants.MESSAGE_RUN_CONNECTION, "", "");
+    }
+
+    public void cancel() {
+      try {mmSocket.close();}
+      catch (IOException e) {Log.e(TAG, "close() of connect socket failed", e);}
+    }
+  }
+
+  /**
+   * This thread runs during a connection with a remote device.
+   * It handles all incoming and outgoing transmissions.
+   * It creates and runs the input and output streams, the last stage of a working connection.
+   */
+  private class ConnectedThread extends Thread {
+    private final BluetoothSocket mmSocket;
+    private final InputStream mmInStream;
+    private final OutputStream mmOutStream;
+    private Handler handler;
+
+    public ConnectedThread(BluetoothSocket socket) {
+      Log.d(TAG, "create ConnectedThread");
+      mmSocket = socket;
+      InputStream tmpIn = null; OutputStream tmpOut = null;
+      try {tmpIn = socket.getInputStream();tmpOut = socket.getOutputStream();}
+      catch (IOException e) {Log.e(TAG, "temp sockets not created", e);}
+      mmInStream = tmpIn; mmOutStream = tmpOut;
+    }
+
+    @Override
+    public void run() {
+      byte[] buffer = new byte[1024];
+      int bytes;
+      Log.d(TAG, "BEGIN mConnectedThread <"+this+">.");
+      Looper.prepare();
+      Log.d(TAG, "Launched Looper.prepare()");
+      handler = new Handler();
+      Log.d(TAG, "Created new Handler");
+      Log.d(TAG,"RunAsServer is <"+runAsServer+">.");
+      if (runAsServer) {handler.post(sendRandomData);}
+      else {handler.post(readData);}
+      Log.d(TAG, "Launch Looper.loop()");
+      Looper.loop();
+      Log.d(TAG,"END mConnectedThread <"+this+">.");
+    }
+
+    public void cancel() {
+      try {mmSocket.close();}
+      catch (IOException e) {Log.e(TAG, "close() of connect socket failed", e);}
+    }
+
+    /**
+     * Sends a random piece of data over the bluetooth connection
+     * Supposed to run at a specific interval.
+     *
+     */
+    private Runnable sendRandomData = new Runnable() {
+      @Override
+      public void run() {
+        Random r = new Random();
+        Double rnum = (r.nextGaussian()*1.5)+20;
+        String sdata = String.format("%.1f",rnum);
+        Log.d(TAG," Randomly generated data is <"+sdata+">.");
+        try {mmOutStream.write(sdata.getBytes());}
+        catch (IOException e) {Log.e(TAG, "Exception during write", e);}
+        handler.postDelayed(sendRandomData, DELAY);  // Run again in a few seconds
+      }
+    };
+
+    private Runnable readData = new Runnable() {
+      @Override
+      public void run() {
+        byte[] buffer = new byte[1024];
+        int bytes;
+        try {bytes = mmInStream.read(buffer);}
+        catch (IOException e) {
+          Log.e(TAG, "disconnected", e);
+          // Send a failure message back to the Activity
+          sendToHandler(Constants.MESSAGE_TOAST, Constants.TOAST, "Device connection was lost");
+          return;
+        }
+        // Send the obtained bytes to the UI Activity TODO: Check if the 'sending' can be done better
+        mHandler.obtainMessage(Constants.MESSAGE_READ, bytes, -1, buffer).sendToTarget();
+        handler.postDelayed(readData, 1); // Repeat in 1ms
+      }
+    };
+  }
+
+
+
+
+
+  /*
+  public interface ConnectionTypeSelectionDialogListener {
+    void onDialogPositiveClick(DialogFragment dialog);
+    void onDialogNegativeClick(DialogFragment dialog);
+    void onDialogDismiss(DialogFragment dialog);
+  }
+
+  ConnectionTypeSelectionDialogListener mListener;
+
+  @Override
+  public void onAttach(Context context) {
+    super.onAttach(context);
+     try {mListener = (ConnectionTypeSelectionDialogListener) context;}
+     catch (ClassCastException e) {throw new ClassCastException(context.toString() + " must implement NoticeDialogListener");}
+  }
+*/
+
+
+
+
+/*
+
+  public void setConnectionType(View view){
+    if ( ConnectionType != TYPE_NOT_SET ) return; // Connection type already set and cannot be changed
+    onResumeLock = true;
+    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+    alertDialogBuilder.setMessage(R.string.dialog_select_connection_type);
+    alertDialogBuilder
+      .setPositiveButton(R.string.dialog_select_server, new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface d, int a) {
+          if (ConnectionType==TYPE_NOT_SET) {ConnectionType=TYPE_SERVER;}
+          onResumeLock = false;
+          onResume();
+        }
+      })
+      .setNegativeButton(R.string.dialog_select_client,new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface d, int a) {
+          if (ConnectionType==TYPE_NOT_SET) {ConnectionType=TYPE_CLIENT;}
+          onResumeLock = false;
+          onResume();
+        }
+      });
+    AlertDialog alertDialog = alertDialogBuilder.create();
+    alertDialog.show();
+  }
+*/
+
+
+    // ===== The following code retrieves the UUIDs for the device and prints them in the log.
+    // ParcelUuid listUUID[] = mBluetoothDevice.getUuids();
+    // for (int i=0; i < listUUID.length; i++) {Log.d(TAG, "UUID #"+i+" is <"+listUUID[i].getUuid().toString()+">.");}
+    // Log.d(TAG, "Selected UUID is "+ THIS_APP_UUID.toString());
+
+
+
+
+
+    if (!onResumeLock) {  //  Allow user here to enable Bluetooth if it is not yet.
+      onResumeLock = true;
+      Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+      startActivityForResult(enableIntent, REQUEST_ENABLE_BT);  // The 'Result' launches onResume() on exit.
+    }
+    if (!onResumeLock) {  // Bluetooth still disabled
+      Toast.makeText(getApplicationContext(), R.string.bt_still_disabled, Toast.LENGTH_LONG).show();
+      finish();  // TODO Too radical again but will do for now.
+    }
+    // Bluetooth is enabled so we can select the device to connect to
+    // TODO: check here if a device is already 'registered' in storage and if it is paired.
+    // if it is, assign the device address to the proper variable, set the right boolean and proceed.
+    if (!onResumeLock && mDeviceAddress == "") { // no device is 'registered' so we need to find one in the current paired ones
+      onResumeLock = true;
+      Intent selectIntent = new Intent( this, DeviceSelection.class);
+      startActivityForResult(selectIntent, SELECT_DEVICE);
+    }
+    if (!onResumeLock) { // Here we have to assume that the Bluetooth device has been assigned already and is paired.
+      // Attempt connection if it is not already done.
+      mConnection.setConnection(mHandler, mDeviceAddress, (ConnectionType==TYPE_SERVER));
+      Log.d(TAG, "Connection instantiated.");
+    }

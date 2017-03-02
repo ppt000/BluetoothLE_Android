@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <android.support.v7.widget.Toolbar
+    android:id="@+id/app_toolbar"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    android:background="?attr/colorPrimary"
+    android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+    app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+    app:title="@string/title"/>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="@dimen/activity_vertical_margin"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:paddingTop="@dimen/activity_vertical_margin"
+        tools:context="com.empiluma.bluetoothle.MainActivity"
+        android:layout_below="@+id/app_toolbar"
+        android:layout_alignParentStart="true">
+
+        <TextView
+            android:text="@string/dummy_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="10dp"
+            android:id="@+id/textView_Status"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:text="@string/dummy_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/textView_Status"
+            android:lines ="10"
+            android:layout_marginBottom="10dp"
+            android:id="@+id/textView_Output"/>
+
+        <TextView
+            android:text="@string/dummy_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/textView_Output"
+            android:layout_marginTop="10dp"
+            android:id="@+id/textView_DeviceAddress"/>
+
+        <TextView
+            android:text="@string/dummy_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/textView_DeviceAddress"
+            android:layout_marginTop="10dp"
+            android:id="@+id/textView_DeviceName"/>
+
+        <TextView
+            android:text="@string/dummy_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lines="5"
+            android:layout_below="@id/textView_DeviceName"
+            android:layout_marginTop="10dp"
+            android:id="@+id/textView_Debug"/>
+
+
+    </RelativeLayout>
+
+</RelativeLayout>

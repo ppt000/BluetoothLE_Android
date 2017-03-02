@@ -1,0 +1,64 @@
+<resources>
+
+    <string name="app_name">rimalutech</string>
+    <string name="title">RimaluTech</string>
+
+    <string name="device_address_key">default_device_address</string>
+    <string name="device_name_key">default_device_name</string>
+
+
+
+    <string name="welcome">Ciao Paolo!</string>
+
+    <string name="dummy_text">DUMMY TEXT</string>
+
+    <!-- Labels -->
+    <string name="label_select_device">Select Device from List</string>
+
+    <!-- Status messages -->
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_disconnecting">Disconnecting</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_connecting">Connecting</string>
+
+    <!-- Menu items -->
+    <string name="action_enable_bt">Enable Bluetooth</string>
+    <string name="action_select_device">Select Device</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="action_exit">Exit Application</string>
+
+    <!-- Standard alert button strings-->
+    <string name="alert_ok">OK</string>
+    <string name="alert_yes">YES</string>
+    <string name="alert_no">NO</string>
+
+    <!-- Alert boxes -->
+    <string name="alert_title_exit">Exit Application</string>
+    <string name="alert_message_exit">Are you sure you want to exit?</string>
+
+    <string name="alert_title_no_bluetooth">No Bluetooth</string>
+    <string name="alert_message_no_bluetooth">Your device has no bluetooth functionality.\\nThis app can\'t run without it.</string>
+
+    <string name="alert_title_no_device">No device selected</string>
+    <string name="alert_message_no_device">No device is selected.  Pair first your target device and come back here to select it.</string>
+
+    <string name="alert_title_bluetooth_disabled">Bluetooth Disabled</string>
+    <string name="alert_message_bluetooth_disabled">Bluetooth is disabled. Enable it and try again.</string>
+
+    <string name="alert_title_unknown_error">Unknown Error</string>
+    <string name="alert_message_unknown_error">An unrecognised error has occurred. Please try again.</string>
+
+    <string name="alert_title_invalid_address">Invalid Address</string>
+    <string name="alert_message_invalid_address">Target device address is invalid.  Select another device from the menu.</string>
+
+    <string name="alert_title_device_unknown">Device Unknown</string>
+    <string name="alert_message_device_unknown">Target device is probably not paired. Pair it and come back to select it.</string>
+
+    <string name="alert_title_problem_connecting">Connecting error</string>
+    <string name="alert_message_problem_connecting">Problems trying to connect. Try again.</string>
+    <string name="alert_title_problem_reading">Problem Reading</string>
+    <string name="alert_message_problem_reading">There was a problem while receiving data. Please try again.</string>
+    <string name="alert_message_scan_not_found">No device was found during the scan. Please try again.</string>
+
+</resources>
