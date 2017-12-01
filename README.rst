@@ -1,4 +1,5 @@
-# BluetoothLE_Android
+BluetoothLE_Android
+===================
 An Android app implementing BLE communication
 =============================================
 
